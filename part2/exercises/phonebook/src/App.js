@@ -1,46 +1,20 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import personsService from './services/persons'
-
-const Filter = ({ handleSearchTerm, searchTerm }) => (
-  <div>
-    <input onChange={handleSearchTerm} value={searchTerm} />
-  </div>
-)
-
-const PersonForm = ({ addPerson, handleNameChange, newName, handleNumberChange, newNumber }) => (
-  <form onSubmit={addPerson}>
-    <div>
-      name: <input onChange={handleNameChange} value={newName} />
-    </div>
-    <div>
-      number: <input onChange={handleNumberChange} value={newNumber} />
-    </div>
-    <div>
-      <button type="submit">add</button>
-    </div>
-  </form>
-)
-
-const Persons = ({ persons, searchTerm, handleDelete }) => {
-  const numbers = persons.filter(person => {
-    return searchTerm === '' || person.name.toLowerCase().indexOf(searchTerm.toLowerCase()) >= 0;
-  }).map(person => {
-    return <div key={person.name}>{person.name} {person.number} <button onClick={handleDelete(person)}>delete</button></div>
-  });
-
-  return (
-    <div>
-      {numbers}
-    </div>
-  )
-}
+import Filter from './components/Filter'
+import PersonForm from './components/PersonForm'
+import Persons from './components/Persons'
+import Notification from './components/Notification'
 
 const App = () => {
   const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [notification, setNotification] = useState({
+    message: null,
+    className: null
+  });
 
   useEffect(() => {
     personsService
@@ -72,6 +46,16 @@ const App = () => {
     personsService
       .create(newPerson)
       .then(personsData => {
+        setNotification({
+          message: `Added ${newName}`,
+          className: 'success'
+        });
+        setTimeout(() => {
+          setNotification({
+            message: null,
+            className: null
+          });
+        }, 5000);
         setPersons(persons.concat(personsData));
         setNewName('');
         setNewNumber('');
@@ -97,6 +81,18 @@ const App = () => {
           .deleteRecord(person.id)
           .then(response => {
             setPersons(persons.filter(personData => person.id !== personData.id));
+          })
+          .catch(error => {
+            setNotification({
+              message: `Information of ${person.name} has already been removed from server`,
+              className: 'error'
+            });
+            setTimeout(() => {
+              setNotification({
+                message: null,
+                className: null
+              });
+            }, 5000);
           });
       }
     }
@@ -105,6 +101,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={notification.message} className={notification.className} />
       <Filter handleSearchTerm={handleSearchTerm} searchTerm={searchTerm} />
       <h2>add a new</h2>
       <PersonForm addPerson={addPerson} handleNameChange={handleNameChange} newName={newName} handleNumberChange={handleNumberChange} newNumber={newNumber} />
