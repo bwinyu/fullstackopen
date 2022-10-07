@@ -22,7 +22,20 @@ const App = () => {
       .then(personsData => {
         setPersons(personsData);
       });
-  }, [])
+  }, []);
+
+  const showNotification = (message, className) => {
+    setNotification({
+      message: message,
+      className: className
+    });
+    setTimeout(() => {
+      setNotification({
+        message: null,
+        className: null
+      });
+    }, 5000);
+  }
 
   const addPerson = (e) => {
     e.preventDefault();
@@ -39,6 +52,9 @@ const App = () => {
             setPersons(persons.map(person => person.id === existing.id ? personsData : person));
             setNewName('');
             setNewNumber('');
+          })
+          .catch(error => {
+            showNotification(error.response.data.error, 'error');
           });
       }
       return;
@@ -46,19 +62,13 @@ const App = () => {
     personsService
       .create(newPerson)
       .then(personsData => {
-        setNotification({
-          message: `Added ${newName}`,
-          className: 'success'
-        });
-        setTimeout(() => {
-          setNotification({
-            message: null,
-            className: null
-          });
-        }, 5000);
+        showNotification(`Added ${newName}`, 'success');
         setPersons(persons.concat(personsData));
         setNewName('');
         setNewNumber('');
+      })
+      .catch(error => {
+        showNotification(error.response.data.error, 'error');
       });
   }
 
@@ -83,16 +93,7 @@ const App = () => {
             setPersons(persons.filter(personData => person.id !== personData.id));
           })
           .catch(error => {
-            setNotification({
-              message: `Information of ${person.name} has already been removed from server`,
-              className: 'error'
-            });
-            setTimeout(() => {
-              setNotification({
-                message: null,
-                className: null
-              });
-            }, 5000);
+            showNotification(error.response.data.error, 'error');
           });
       }
     }
