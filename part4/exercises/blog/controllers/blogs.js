@@ -1,34 +1,61 @@
-const blogsRouter = require('express').Router();
+const blogsRouter = require('express').Router()
 const Blog = require('../models/blogs')
+const middleware = require('../utils/middleware')
 
 blogsRouter.get('/', async (request, response) => {
-  const blogs = await Blog.find({})
+  const blogs = await Blog.find({}).populate('user', { username: 1, name: 1 })
   response.json(blogs)
 })
 
-blogsRouter.post('/', async (request, response) => {
-  const blog = new Blog(request.body)
+blogsRouter.post('/', middleware.userExtractor, async (request, response) => {
+  let blog = request.body
+  const user = request.user
+  
+  blog = {
+    ...blog,
+    user: user._id
+  }
+  
+  const newBlog = new Blog(blog)
 
-  const savedBlog = await blog.save()
+  const savedBlog = await newBlog.save()
+  user.blogs = user.blogs.concat(savedBlog)
+  await user.save()
+
   response.status(201).json(savedBlog)
 })
 
-blogsRouter.delete('/:id', async (request, response) => {
+blogsRouter.delete('/:id', middleware.userExtractor, async (request, response) => {
+  const user = request.user
+
+  const blog = await Blog.findById(request.params.id)
+  if(blog.user.toString() !== user.id.toString()) {
+    return response.status(401).json({ error: 'only the owner can delete this blog' })
+  }
   await Blog.findByIdAndRemove(request.params.id)
   response.status(204).end()
 })
 
-blogsRouter.put('/:id', async (request, response) => {
+blogsRouter.put('/:id', middleware.userExtractor, async (request, response) => {
+  const user = request.user
   const body = request.body
 
-  const blog = {
+  const blog = await Blog.findById(request.params.id)
+  if(blog.user.toString() !== user.id.toString()) {
+    return response.status(401).json({ error: 'only the owner can edit this blog' })
+  }
+
+  const newBlog = {
     title: body.title,
     author: body.author,
     url: body.url,
-    likes: body.likes
+    likes: body.likes,
+    user: blog.user
   }
 
-  const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, blog, { new: true, runValidator: true, context: 'query' })
+  console.log(newBlog)
+
+  const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, newBlog, { new: true, runValidator: true, context: 'query' })
   response.json(updatedBlog)
 })
 
