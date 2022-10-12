@@ -36,14 +36,10 @@ blogsRouter.delete('/:id', middleware.userExtractor, async (request, response) =
   response.status(204).end()
 })
 
-blogsRouter.put('/:id', middleware.userExtractor, async (request, response) => {
-  const user = request.user
+blogsRouter.put('/:id', async (request, response) => {
   const body = request.body
 
   const blog = await Blog.findById(request.params.id)
-  if(blog.user.toString() !== user.id.toString()) {
-    return response.status(401).json({ error: 'only the owner can edit this blog' })
-  }
 
   const newBlog = {
     title: body.title,
@@ -52,8 +48,6 @@ blogsRouter.put('/:id', middleware.userExtractor, async (request, response) => {
     likes: body.likes,
     user: blog.user
   }
-
-  console.log(newBlog)
 
   const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, newBlog, { new: true, runValidator: true, context: 'query' })
   response.json(updatedBlog)
